@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: "jdbc:sqlserver://(localdb)\\MSSQLLocalDB;databaseName=HTTraCuuThuoc_AI;integratedSecurity=true;encrypt=false;trustServerCertificate=true"
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  sql:
+    init:
+      mode: never
+
+# LocalDB chỉ nhận Windows Authentication. Nếu Microsoft JDBC không mở được
+# dynamic LocalDB pipe trên máy đang chạy, dùng profile sqlserver với SQL Server
+# Express/Developer TCP hoặc chạy chế độ demo H2 mặc định.

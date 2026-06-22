@@ -1,0 +1,28 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:h2:mem:medcheck;MODE=MSSQLServer;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+  h2:
+    console:
+      enabled: true
+app:
+  disclaimer: "Thông tin chỉ mang tính tham khảo, không thay thế tư vấn của bác sĩ hoặc dược sĩ."
+  google-client-id: ${GOOGLE_CLIENT_ID:}
+---
+spring:
+  config:
+    activate:
+      on-profile: sqlserver
+  datasource:
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=HTTraCuuThuoc_AI;encrypt=true;trustServerCertificate=true}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  sql:
+    init:
+      mode: never
