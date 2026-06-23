@@ -38,6 +38,7 @@ async function updateNav() {
   }
 
   $('#account').innerHTML = me ? `<div class="avatar">${me.fullName?.[0] || 'U'}</div><span>${me.fullName}</span><button class="ghost" onclick="logout()">Thoát</button>` : `<button class="ghost" onclick="showLogin()">Đăng nhập</button><button onclick="showRegister()">Đăng ký</button>`;
+  initChatWelcome();
 }
 
 function showLogin() {
@@ -307,7 +308,10 @@ async function checkDrug(id) {
         <b>Khuyến nghị</b>
         <p>${w.recommendation}</p>
         ${w.source ? `<small class="muted">Nguồn: ${w.source}</small>` : ''}
-        <div><button class="ghost" style="margin-top:10px" onclick="requestAi(${i})">✦ Yêu cầu AI giải thích dễ hiểu</button></div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="ghost" style="flex:1" onclick="requestAi(${i})">✦ Lưu duyệt giải thích</button>
+          <button style="flex:1; background: var(--green); border-color: var(--green);" onclick="chatExplainWarning(${i})">💬 Trò chuyện với AI</button>
+        </div>
       </div>`).join('') : `<div class="card" style="background:var(--green-light); border:1.5px solid var(--green); color:var(--ink); margin-top:20px;">
         <h3 style="color:var(--green); margin-top:0;">✓ Chưa phát hiện cảnh báo trong dữ liệu hiện có</h3>
         <p>Điều này không khẳng định thuốc hoàn toàn an toàn. Hãy hỏi nhân viên y tế khi cần.</p>
@@ -768,5 +772,156 @@ async function deleteRule(id) {
     professionalDashboard();
   } catch (e) {
     toast(e.message);
+  }
+}
+
+// --- AI CHATBOX INTERACTION LOGIC ---
+let chatHistory = [];
+let currentWarningContext = null;
+
+function toggleChat() {
+  const container = $('#chat-box-container');
+  if (!container) return;
+  const isOpen = !container.classList.contains('chat-closed');
+  if (isOpen) {
+    container.classList.add('chat-closed');
+  } else {
+    container.classList.remove('chat-closed');
+    const messagesEl = $('#chat-messages');
+    if (messagesEl && messagesEl.children.length === 0) {
+      initChatWelcome();
+    }
+    scrollToBottom();
+  }
+}
+window.toggleChat = toggleChat;
+
+function initChatWelcome() {
+  const messagesEl = $('#chat-messages');
+  if (!messagesEl) return;
+  messagesEl.innerHTML = '';
+  
+  if (!me) {
+    messagesEl.innerHTML = `
+      <div class="chat-msg assistant">Xin chào! Tôi là Trợ lý Y khoa AI của MedCheck.
+      
+Vui lòng đăng nhập để tôi có thể hỗ trợ tư vấn cá nhân hóa và giải thích các cảnh báo y tế dựa trên hồ sơ bệnh lý của riêng bạn.</div>
+      <div class="chat-msg system-alert">
+        Bạn chưa đăng nhập.
+        <br>
+        <button onclick="showLogin(); toggleChat();">Đăng nhập ngay</button>
+      </div>
+    `;
+    return;
+  }
+  
+  chatHistory = [];
+  currentWarningContext = null;
+  const name = me.fullName || 'bạn';
+  const roleText = me.role === 'BENH_NHAN' ? 'bệnh nhân' : 'nhân viên y tế';
+  
+  let welcomeMsg = `Xin chào ${name}! Tôi là Trợ lý Y khoa AI của MedCheck.
+  
+Tôi đã kết nối với hồ sơ ${roleText} của bạn và sẵn sàng hỗ trợ giải thích các cảnh báo tương tác thuốc hoặc tư vấn sử dụng thuốc an toàn.
+
+Bạn có thể hỏi tôi bất cứ câu hỏi nào hoặc chọn một gợi ý nhanh bên dưới:`;
+
+  messagesEl.innerHTML = `
+    <div class="chat-msg assistant">
+      ${welcomeMsg}
+      <div class="quick-prompts">
+        <button class="quick-prompt-btn" onclick="sendQuickPrompt('Làm sao để biết một thuốc có tương tác xấu với bệnh nền của tôi?')">🔍 Cách kiểm tra tương tác thuốc?</button>
+        <button class="quick-prompt-btn" onclick="sendQuickPrompt('Hãy hướng dẫn tôi cách đọc và hiểu mức độ cảnh báo?')">⚠️ Ý nghĩa các mức độ cảnh báo?</button>
+        <button class="quick-prompt-btn" onclick="sendQuickPrompt('Tại sao việc tự ý dùng thuốc giảm đau lại nguy hiểm cho người bệnh thận hoặc dạ dày?')">💊 Lưu ý khi dùng thuốc giảm đau?</button>
+      </div>
+    </div>
+  `;
+}
+window.initChatWelcome = initChatWelcome;
+
+function sendQuickPrompt(text) {
+  const inputEl = $('#chat-input-field');
+  if (!inputEl) return;
+  inputEl.value = text;
+  $('#chat-input-form').dispatchEvent(new Event('submit'));
+}
+window.sendQuickPrompt = sendQuickPrompt;
+
+async function sendChatMessage(e) {
+  if (e) e.preventDefault();
+  const inputEl = $('#chat-input-field');
+  if (!inputEl) return;
+  const message = inputEl.value.trim();
+  if (!message) return;
+  
+  if (!me) {
+    showLogin();
+    toggleChat();
+    return;
+  }
+  
+  appendChatMessage('user', message);
+  inputEl.value = '';
+  
+  const loadingEl = $('#chat-loading');
+  if (loadingEl) loadingEl.style.display = 'flex';
+  scrollToBottom();
+  
+  try {
+    const response = await api('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: message,
+        history: chatHistory,
+        warningContext: currentWarningContext
+      })
+    });
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    appendChatMessage('assistant', response.answer);
+    
+    chatHistory.push({ role: 'user', content: message });
+    chatHistory.push({ role: 'model', content: response.answer });
+    
+    currentWarningContext = null;
+  } catch (err) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    appendChatMessage('assistant', 'Xin lỗi, đã xảy ra lỗi trong quá trình xử lý câu hỏi: ' + err.message);
+  }
+  
+  scrollToBottom();
+}
+window.sendChatMessage = sendChatMessage;
+
+function chatExplainWarning(index) {
+  const w = cache.lookup.warnings[index];
+  if (!w) return;
+  
+  const container = $('#chat-box-container');
+  if (container && container.classList.contains('chat-closed')) {
+    toggleChat();
+  }
+  
+  currentWarningContext = `${w.type}: ${w.subject} - Mức độ: ${labelSeverity(w.severity)} - Nội dung: ${w.content} - Khuyến nghị: ${w.recommendation}`;
+  
+  const promptText = `Giải thích cảnh báo y tế này cho tôi: Cảnh báo về ${w.subject} (${w.type}), cảnh báo ở mức "${labelSeverity(w.severity)}" với lý do: "${w.content}". Khuyến nghị: "${w.recommendation}".`;
+  sendQuickPrompt(promptText);
+}
+window.chatExplainWarning = chatExplainWarning;
+
+function appendChatMessage(role, content) {
+  const messagesEl = $('#chat-messages');
+  if (!messagesEl) return;
+  const msgEl = document.createElement('div');
+  msgEl.className = 'chat-msg ' + role;
+  msgEl.textContent = content;
+  messagesEl.appendChild(msgEl);
+}
+
+function scrollToBottom() {
+  const messagesEl = $('#chat-messages');
+  if (messagesEl) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 }
