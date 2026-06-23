@@ -1,1 +1,88 @@
-.search-wrap{position:relative;max-width:760px}.search-wrap .search-box{max-width:none}.suggestions{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px #183c3325;z-index:8;overflow:hidden;margin-top:5px}.suggestion{padding:12px 15px;cursor:pointer;border-bottom:1px solid var(--line)}.suggestion:hover{background:var(--mint)}.suggestion small{display:block;color:var(--muted);margin-top:3px}.google-btn{width:100%;background:#fff;color:#324b46;border:1px solid var(--line);margin-top:10px}.divider{text-align:center;color:var(--muted);margin:15px 0}.ai-review{border-left:4px solid #7657bd}.ai-actions{display:flex;gap:8px;margin-top:12px}
+.search-wrap {
+  position: relative;
+  max-width: 100%;
+}
+
+.suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+  z-index: 99;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.suggestion {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.2s;
+}
+
+.suggestion:last-child {
+  border-bottom: none;
+}
+
+.suggestion:hover {
+  background: var(--primary-light);
+}
+
+.suggestion small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.google-btn {
+  width: 100%;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.google-btn:hover {
+  background: var(--bg);
+}
+
+.divider {
+  text-align: center;
+  color: var(--muted);
+  margin: 15px 0;
+  position: relative;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--line);
+  z-index: 1;
+}
+
+.divider span {
+  background: #fff;
+  padding: 0 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.ai-review {
+  border-left: 4px solid #7C3AED;
+  background: #FAF5FF;
+}
+
+.ai-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
