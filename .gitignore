@@ -7,3 +7,6 @@ target/
 .tools/
 backend.log
 backend-error.log
+
+**/bin/
+**/obj/

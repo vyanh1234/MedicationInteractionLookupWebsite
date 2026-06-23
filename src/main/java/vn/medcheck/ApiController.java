@@ -75,6 +75,12 @@ public class ApiController {
 
   @GetMapping("/admin/statistics") Object statistics(@RequestHeader("Authorization") String h){var u=user(h);staff(u);return Map.of("users",db.queryForObject("select count(*) from TaiKhoan",Integer.class),"drugs",db.queryForObject("select count(*) from Thuoc",Integer.class),"diseases",db.queryForObject("select count(*) from BenhNen",Integer.class),"lookups",db.queryForObject("select count(*) from LichSuTraCuu",Integer.class));}
   @GetMapping("/warning-rules") Object rules(@RequestHeader("Authorization") String h){staff(user(h));return list("select q.MaQuyTac id,h.TenHoatChat ingredient,b.TenBenh disease,q.MucDo severity,q.NoiDung content,q.TrangThai status from QuyTacCanhBao q join HoatChat h on h.MaHoatChat=q.MaHoatChat join BenhNen b on b.MaBenhNen=q.MaBenhNen order by q.MaQuyTac desc");}
+  @GetMapping("/warning-rules/{id}") Object getRule(@RequestHeader("Authorization") String h,@PathVariable long id){
+    staff(user(h));
+    var x = list("select MaQuyTac id, MaHoatChat ingredientId, MaBenhNen diseaseId, MucDo severity, NoiDung content, KhuyenNghi recommendation, Nguon source from QuyTacCanhBao where MaQuyTac=?", id);
+    if(x.isEmpty()) throw new IllegalArgumentException("Không tìm thấy quy tắc");
+    return x.getFirst();
+  }
   @PostMapping("/warning-rules/{id}/approve") Object approve(@RequestHeader("Authorization") String h,@PathVariable long id){var u=user(h);staff(u);db.update("update QuyTacCanhBao set TrangThai='DaDuyet' where MaQuyTac=?",id);db.update("insert into AuditLog(MaTaiKhoan,HanhDong,DoiTuong,ChiTiet) values(?,?,?,?)",u.id(),"Duyệt","QuyTacCanhBao","Mã "+id);return Map.of("message","Đã duyệt quy tắc");}
   @GetMapping("/admin/users") Object users(@RequestHeader("Authorization") String h){var u=user(h);if(!"ADMIN".equals(u.role()))throw new SecurityException("Chỉ quản trị viên được xem tài khoản");return list("select MaTaiKhoan id,TenDangNhap username,HoTen fullName,VaiTro role,TrangThai active,NgayTao createdAt from TaiKhoan order by NgayTao desc");}
   @PutMapping("/admin/users/{id}/lock") Object lock(@RequestHeader("Authorization") String h,@PathVariable long id){var u=user(h);if(!"ADMIN".equals(u.role()))throw new SecurityException("Chỉ quản trị viên được khóa tài khoản");if(id==u.id())throw new IllegalArgumentException("Không thể tự khóa tài khoản đang dùng");db.update("update TaiKhoan set TrangThai=0 where MaTaiKhoan=?",id);audit(u,"Khóa","TaiKhoan","Mã "+id);return Map.of("message","Đã khóa tài khoản");}

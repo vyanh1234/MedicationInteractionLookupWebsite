@@ -32,7 +32,73 @@ async function removeHealth(tab,id){const paths={diseases:'background-diseases',
 async function history(){if(!guardPatient())return;app.innerHTML=`<div class="page-head"><h1>Lịch sử tra cứu</h1></div><section class="section"><div id="history" class="card"><div class="empty">Đang tải…</div></div></section>`;try{const xs=await api('/lookup/history');$('#history').innerHTML=xs.length?xs.map(x=>`<div class="list-row"><div class="icon">⌕</div><div class="grow"><b>${x.drug}</b><div class="muted">${new Date(x.time).toLocaleString('vi-VN')} · ${x.warningCount} cảnh báo</div></div><span class="severity ${x.severity}">${labelSeverity(x.severity)}</span></div>`).join(''):'<div class="empty">Bạn chưa có lần tra cứu nào.</div>'}catch(e){toast(e.message)}}
 async function notifications(){if(!guardPatient())return;app.innerHTML=`<div class="page-head"><h1>Thông báo</h1></div><section class="section"><div id="notices" class="card"><div class="empty">Đang tải…</div></div></section>`;try{const xs=await api('/ai/approved');$('#notices').innerHTML=xs.length?xs.map(x=>`<div class="list-row"><div class="icon">✓</div><div class="grow"><b>Giải thích chuyên môn đã được duyệt</b><p>${x.content}</p><small class="muted">Nguồn: ${x.dataSource}</small></div></div>`).join(''):'<div class="empty">Bạn chưa có thông báo mới.</div>'}catch(e){toast(e.message)}}
 async function admin(){if(!me){showLogin();return}if(me.role==='BENH_NHAN'){location.hash='lookup';return}if(me.role==='ADMIN')return adminDashboard();professionalDashboard()}
-async function professionalDashboard(){app.innerHTML=`<div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc và duyệt nội dung AI.</p></div><section class="section"><h2>Nội dung AI chờ duyệt</h2><div id="aiReview" class="card"><div class="empty">Đang tải…</div></div><h2 style="margin-top:35px">Quy tắc cảnh báo</h2><div id="rules" class="card"><div class="empty">Đang tải…</div></div></section>`;try{const [r,a]=await Promise.all([api('/warning-rules'),api('/ai/suggestions/pending')]);renderAiReview(a);$('#rules').innerHTML=`<table><thead><tr><th>Hoạt chất</th><th>Bệnh nền</th><th>Mức độ</th><th>Trạng thái</th></tr></thead><tbody>${r.map(x=>`<tr><td>${x.ingredient}</td><td>${x.disease}</td><td><span class="severity ${x.severity}">${labelSeverity(x.severity)}</span></td><td>${x.status}</td></tr>`).join('')}</tbody></table>`}catch(e){toast(e.message)}}
+async function professionalDashboard() {
+    app.innerHTML = `<div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc và duyệt nội dung AI.</p></div>
+    <section class="section">
+        <h2>Nội dung AI chờ duyệt</h2>
+        <div id="aiReview" class="card"><div class="empty">Đang tải…</div></div>
+        
+        <div class="result-head" style="margin-top:35px; margin-bottom:15px; align-items: center;">
+            <h2 style="margin:0;">Quy tắc cảnh báo</h2>
+            <button onclick="openRuleModal()">+ Thêm mới</button>
+        </div>
+        <div id="rules" class="card" style="padding:0;"><div class="empty">Đang tải…</div></div>
+    </section>
+
+    <dialog id="ruleDialog">
+        <button class="close" onclick="document.getElementById('ruleDialog').close()">×</button>
+        <div id="ruleContentWrapper">
+            <h2 id="ruleModalTitle" style="margin-top: 0;">Thêm Quy Tắc Mới</h2>
+            <form id="ruleForm" onsubmit="event.preventDefault(); saveRule();">
+                <div class="row">
+                    <div class="field"><label>Hoạt chất</label><select id="ruleIngredient" required><option>Đang tải...</option></select></div>
+                    <div class="field"><label>Bệnh nền</label><select id="ruleDisease" required><option>Đang tải...</option></select></div>
+                </div>
+                <div class="field"><label>Mức độ cảnh báo</label><select id="ruleSeverity" required><option value="Cao">Nguy cơ cao</option><option value="TrungBinh">Cần thận trọng</option><option value="Thap">Nguy cơ thấp</option></select></div>
+                <div class="field"><label>Nội dung chi tiết</label><textarea id="ruleContentText" required></textarea></div>
+                <div class="row">
+                    <div class="field"><label>Khuyến nghị</label><input type="text" id="ruleRecommendation"></div>
+                    <div class="field"><label>Nguồn tài liệu</label><input type="text" id="ruleSource"></div>
+                </div>
+                <div class="field" style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="ghost" onclick="document.getElementById('ruleDialog').close()" style="margin-right: 10px;">Hủy</button>
+                    <button type="submit">Lưu quy tắc</button>
+                </div>
+            </form>
+        </div>
+    </dialog>`;
+    
+    try {
+        const [r,a] = await Promise.all([api('/warning-rules'), api('/ai/suggestions/pending')]);
+        renderAiReview(a);
+        
+        $('#rules').innerHTML = `<table>
+            <thead>
+                <tr>
+                    <th>Hoạt chất</th>
+                    <th>Bệnh nền</th>
+                    <th>Mức độ</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align: right;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${r.map(x => `<tr>
+                    <td>${x.ingredient||'—'}</td>
+                    <td>${x.disease||'—'}</td>
+                    <td><span class="severity ${x.severity}">${labelSeverity(x.severity)}</span></td>
+                    <td>${x.status||'DaDuyet'}</td>
+                    <td style="text-align: right;">
+                        <button class="ghost" style="padding: 7px 10px; margin-right: 4px;" onclick="openRuleModal(${x.id})">Sửa</button>
+                        <button class="danger" onclick="deleteRule(${x.id})">Xóa</button>
+                    </td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+    } catch(e) {
+        toast(e.message);
+    }
+}
 async function adminDashboard(){app.innerHTML=`<div class="page-head"><h1>Dashboard quản trị</h1><p class="muted">Tài khoản, phân quyền, nhật ký và thống kê hệ thống.</p></div><section class="section"><div id="stats" class="stats"></div><div class="grid" style="margin-top:24px"><div class="card"><h2>Thuốc bị cảnh báo nhiều</h2><div id="topDrugs"></div></div><div class="card"><h2>Cảnh báo theo mức độ</h2><div id="warningChart"></div></div></div><h2 style="margin-top:35px">Quản lý tài khoản</h2><div id="users" class="card"></div></section>`;try{const [s,u]=await Promise.all([api('/admin/dashboard/summary'),api('/admin/users')]);$('#stats').innerHTML=[['Tổng tài khoản',s.tongTaiKhoan],['Bệnh nhân',s.tongBenhNhan],['Lượt tra cứu',s.tongLuotTraCuu]].map(x=>`<div class="card stat"><div class="muted">${x[0]}</div><b>${x[1]}</b></div>`).join('');$('#topDrugs').innerHTML=s.thuocBiCanhBaoNhieuNhat.length?s.thuocBiCanhBaoNhieuNhat.map(x=>`<div class="list-row"><span class="grow">${x.tenThuoc}</span><b>${x.soLan}</b></div>`).join(''):'<div class="empty">Chưa có dữ liệu</div>';const max=Math.max(1,...s.canhBaoTheoMucDo.map(x=>x.soLuong));$('#warningChart').innerHTML=s.canhBaoTheoMucDo.map(x=>`<div style="margin:12px 0"><div>${labelSeverity(x.mucDoCanhBao)} — ${x.soLuong}</div><div style="height:10px;background:var(--line);border-radius:9px"><div style="height:100%;width:${x.soLuong/max*100}%;background:var(--green);border-radius:9px"></div></div></div>`).join('')||'<div class="empty">Chưa có dữ liệu</div>';renderUsers(u)}catch(e){toast(e.message)}}
 function renderUsers(u){$('#users').innerHTML=`<table><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${u.map(x=>`<tr><td><b>${x.username}</b><br><small>${x.fullName||''}</small></td><td><select onchange="changeRole(${x.id},this.value)">${['BENH_NHAN','DUOC_SI','BAC_SI','ADMIN'].map(r=>`<option ${r===x.role?'selected':''}>${r}</option>`).join('')}</select></td><td>${x.active?'Hoạt động':'Đã khóa'}</td><td><button class="${x.active?'danger':'ghost'}" onclick="toggleUser(${x.id},${x.active})">${x.active?'Khóa':'Mở khóa'}</button></td></tr>`).join('')}</tbody></table>`}
 async function changeRole(id,role){try{const r=await api(`/admin/users/${id}/role`,{method:'PUT',body:JSON.stringify({role})});toast(r.message)}catch(e){toast(e.message);adminDashboard()}}
@@ -41,3 +107,75 @@ function renderAiReview(items){$('#aiReview').innerHTML=items.length?items.map(x
 async function decideAi(id,action){try{const r=await api('/ai/'+action,{method:'POST',body:JSON.stringify({id})});toast(r.message);admin()}catch(e){toast(e.message)}}
 function route(){document.querySelectorAll('nav a').forEach(x=>x.classList.toggle('active',x.hash===location.hash));const p=(location.hash||'#home').slice(1);({home,lookup,profile,history,notifications,admin}[p]||home)();scrollTo(0,0)}
 window.addEventListener('hashchange',route);updateNav();route();
+// --- LOGIC QUẢN LÝ QUY TẮC CẢNH BÁO ---
+
+let currentRuleId = null;
+
+async function openRuleModal(id = null) {
+    const dialog = document.getElementById('ruleDialog');
+    const form = document.getElementById('ruleForm');
+    form.reset();
+    currentRuleId = id;
+
+    try {
+        // Lấy danh sách Hoạt chất & Bệnh nền để đổ vào dropdown
+        const [ings, dis] = await Promise.all([api('/ingredients'), api('/diseases')]);
+        document.getElementById('ruleIngredient').innerHTML = ings.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        document.getElementById('ruleDisease').innerHTML = dis.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+
+        if (id) {
+            document.getElementById('ruleModalTitle').innerText = 'Chỉnh sửa Quy Tắc';
+            const rule = await api('/warning-rules/' + id);
+            
+            document.getElementById('ruleIngredient').value = rule.ingredientId;
+            document.getElementById('ruleDisease').value = rule.diseaseId;
+            document.getElementById('ruleSeverity').value = rule.severity || 'Cao';
+            document.getElementById('ruleContentText').value = rule.content || '';
+            document.getElementById('ruleRecommendation').value = rule.recommendation || '';
+            document.getElementById('ruleSource').value = rule.source || '';
+        } else {
+            document.getElementById('ruleModalTitle').innerText = 'Thêm Quy Tắc Mới';
+        }
+        
+        dialog.showModal();
+    } catch (e) {
+        toast('Lỗi tải dữ liệu: ' + e.message);
+    }
+}
+
+async function saveRule() {
+    // Đóng gói JSON chuẩn ID theo yêu cầu của Back-end
+    const body = {
+        ingredientId: parseInt(document.getElementById('ruleIngredient').value),
+        diseaseId: parseInt(document.getElementById('ruleDisease').value),
+        severity: document.getElementById('ruleSeverity').value,
+        content: document.getElementById('ruleContentText').value.trim(),
+        recommendation: document.getElementById('ruleRecommendation').value.trim(),
+        source: document.getElementById('ruleSource').value.trim()
+    };
+
+    try {
+        if (currentRuleId) {
+            await api('/warning-rules/' + currentRuleId, { method: 'PUT', body: JSON.stringify(body) });
+            toast('Đã cập nhật quy tắc');
+        } else {
+            await api('/warning-rules', { method: 'POST', body: JSON.stringify(body) });
+            toast('Đã thêm quy tắc mới');
+        }
+        document.getElementById('ruleDialog').close();
+        professionalDashboard(); // Cập nhật lại bảng tự động
+    } catch (e) {
+        toast(e.message);
+    }
+}
+
+async function deleteRule(id) {
+    if (!confirm('Bạn có chắc chắn muốn xóa quy tắc cảnh báo này không? Thao tác không thể hoàn tác.')) return;
+    try {
+        await api('/warning-rules/' + id, { method: 'DELETE' });
+        toast('Đã xóa quy tắc');
+        professionalDashboard();
+    } catch (e) {
+        toast(e.message);
+    }
+}
