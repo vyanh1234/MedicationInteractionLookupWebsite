@@ -7,6 +7,5 @@ target/
 .tools/
 backend.log
 backend-error.log
-
-**/bin/
-**/obj/
+tools/DbDeploy/bin/
+tools/DbDeploy/obj/
