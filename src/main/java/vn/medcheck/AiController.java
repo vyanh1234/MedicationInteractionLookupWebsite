@@ -97,7 +97,7 @@ public class AiController {
 
       var client = HttpClient.newHttpClient();
       var request = HttpRequest.newBuilder()
-          .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey))
+          .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + geminiApiKey))
           .header("Content-Type", "application/json")
           .POST(HttpRequest.BodyPublishers.ofString(jsonInput, StandardCharsets.UTF_8))
           .build();
