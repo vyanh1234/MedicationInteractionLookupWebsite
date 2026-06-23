@@ -20,10 +20,7 @@ spring:
     activate:
       on-profile: sqlserver
   datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=HTTraCuuThuoc_AI;encrypt=true;trustServerCertificate=true}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: "jdbc:sqlserver://DESKTOP-401B6OP\\SQLEXPRESSS;databaseName=HTTraCuuThuoc_AI;integratedSecurity=true;encrypt=false;trustServerCertificate=true"
   sql:
     init:
       mode: never
-
