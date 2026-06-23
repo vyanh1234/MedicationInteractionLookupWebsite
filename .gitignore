@@ -9,3 +9,5 @@ backend.log
 backend-error.log
 tools/DbDeploy/bin/
 tools/DbDeploy/obj/
+**/bin/
+**/obj/

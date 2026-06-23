@@ -14,11 +14,11 @@ public class ApiController {
   private void staff(AuthService.User u){if(!Set.of("DUOC_SI","BAC_SI","ADMIN").contains(u.role()))throw new SecurityException("Bạn không có quyền thực hiện thao tác này");}
   private List<Map<String,Object>> list(String sql,Object...args){return db.queryForList(sql,args);}
 
-  @GetMapping("/drugs") Object drugs(@RequestParam(defaultValue="") String keyword){return list("select t.MaThuoc id,t.TenThuoc name,t.DangBaoChe dosageForm,t.HamLuong strength,t.NhaSanXuat manufacturer,t.MoTa description,string_agg(h.TenHoatChat, ', ') ingredients from Thuoc t left join Thuoc_HoatChat th on th.MaThuoc=t.MaThuoc left join HoatChat h on h.MaHoatChat=th.MaHoatChat where t.TrangThai=1 and lower(t.TenThuoc) like lower(?) group by t.MaThuoc,t.TenThuoc,t.DangBaoChe,t.HamLuong,t.NhaSanXuat,t.MoTa order by t.TenThuoc","%"+keyword+"%");}
+  @GetMapping("/drugs") Object drugs(@RequestParam(defaultValue="") String keyword){return list("select t.MaThuoc id, t.TenThuoc name, t.DangBaoChe dosageForm, t.HamLuong strength, t.NhaSanXuat manufacturer, t.MoTa description, STUFF((SELECT ', ' + h.TenHoatChat FROM Thuoc_HoatChat th JOIN HoatChat h ON h.MaHoatChat = th.MaHoatChat WHERE th.MaThuoc = t.MaThuoc FOR XML PATH('')), 1, 2, '') as ingredients from Thuoc t where t.TrangThai=1 and lower(t.TenThuoc) like lower(?) order by t.TenThuoc","%"+keyword+"%");}
   @GetMapping("/drugs/{id}") Object drug(@PathVariable long id){var x=list("select * from Thuoc where MaThuoc=?",id);if(x.isEmpty())throw new IllegalArgumentException("Không tìm thấy thuốc");return x.getFirst();}
   @GetMapping("/drugs/autocomplete") Object autocomplete(@RequestParam String keyword){
     String key=fold(keyword==null?"":keyword.trim()); if(key.length()<2)return Map.of("items",List.of());
-    var rows=list("select t.MaThuoc id,t.MaThuoc maThuoc,t.TenThuoc tenThuoc,t.TenQuocTe tenQuocTe,t.DangBaoChe dangBaoChe,t.DuongDung duongDung,t.CanKeDon canKeDon,(select string_agg(hc.TenHoatChat, ', ') from Thuoc_HoatChat th join HoatChat hc on hc.MaHoatChat=th.MaHoatChat where th.MaThuoc=t.MaThuoc) hoatChat,(select string_agg(tk.TenKhac, ', ') from Thuoc_TenKhac tk where tk.MaThuoc=t.MaThuoc) tenKhac from Thuoc t where t.TrangThai=1");
+    var rows=list("select t.MaThuoc id,t.MaThuoc maThuoc,t.TenThuoc tenThuoc,t.TenQuocTe tenQuocTe,t.DangBaoChe dangBaoChe,t.DuongDung duongDung,t.CanKeDon canKeDon, STUFF((SELECT ', ' + hc.TenHoatChat FROM Thuoc_HoatChat th JOIN HoatChat hc ON hc.MaHoatChat=th.MaHoatChat WHERE th.MaThuoc=t.MaThuoc FOR XML PATH('')), 1, 2, '') as hoatChat, STUFF((SELECT ', ' + tk.TenKhac FROM Thuoc_TenKhac tk WHERE tk.MaThuoc=t.MaThuoc FOR XML PATH('')), 1, 2, '') as tenKhac from Thuoc t where t.TrangThai=1");
     var items=rows.stream().map(r->new AbstractMap.SimpleEntry<>(matchRank(r,key),r)).filter(e->e.getKey()<99).sorted(Comparator.<Map.Entry<Integer,Map<String,Object>>>comparingInt(Map.Entry::getKey).thenComparing(e->String.valueOf(e.getValue().get("tenThuoc")))).limit(10).map(Map.Entry::getValue).toList();
     return Map.of("items",items);
   }
@@ -29,8 +29,13 @@ public class ApiController {
   @GetMapping("/ingredients") Object ingredients(){return list("select MaHoatChat id,TenHoatChat name,MoTa description from HoatChat where TrangThai=1 order by TenHoatChat");}
 
   @GetMapping("/patient/profile") Object profile(@RequestHeader("Authorization") String h){var u=user(h);return list("select b.* from BenhNhan b where b.MaTaiKhoan=?",u.id()).getFirst();}
-  @PutMapping("/patient/profile") Object profileUpdate(@RequestHeader("Authorization") String h,@RequestBody Map<String,Object> b){var u=user(h);db.update("update BenhNhan set HoTen=?,NgaySinh=?,GioiTinh=?,ChieuCao=?,CanNang=?,NhomMau=?,DiaChi=?,GhiChu=? where MaTaiKhoan=?",b.get("fullName"),b.get("birthDate"),b.get("gender"),b.get("height"),b.get("weight"),b.get("bloodType"),b.get("address"),b.get("note"),u.id());return Map.of("message","Đã cập nhật hồ sơ");}
-  @GetMapping("/patient/background-diseases") Object patientDiseases(@RequestHeader("Authorization") String h){return list("select b.MaBenhNen id,b.TenBenh name,x.GhiChu note from BenhNhan_BenhNen x join BenhNen b on b.MaBenhNen=x.MaBenhNen where x.MaBenhNhan=?",patient(user(h).id()));}
+  @PutMapping("/patient/profile") Object profileUpdate(@RequestHeader("Authorization") String h,@RequestBody Map<String,Object> b){
+    var u=user(h);
+    db.update("update BenhNhan set HoTen=?,NgaySinh=?,GioiTinh=?,ChieuCao=?,CanNang=?,NhomMau=?,DiaChi=?,GhiChu=? where MaTaiKhoan=?",b.get("fullName"),b.get("birthDate"),b.get("gender"),b.get("height"),b.get("weight"),b.get("bloodType"),b.get("address"),b.get("note"),u.id());
+    db.update("update TaiKhoan set HoTen=? where MaTaiKhoan=?", b.get("fullName"), u.id());
+    return Map.of("message","Đã cập nhật hồ sơ");
+  }
+  @GetMapping("/patient/background-diseases") Object patientDiseases(@RequestHeader("Authorization") String h){return list("select b.MaBenhNen id,b.TenBenh name,b.MaICD icd,b.NhomBenh category,x.GhiChu note from BenhNhan_BenhNen x join BenhNen b on b.MaBenhNen=x.MaBenhNen where x.MaBenhNhan=?",patient(user(h).id()));}
   @PostMapping("/patient/background-diseases") Object addDisease(@RequestHeader("Authorization") String h,@RequestBody Map<String,Object>b){db.update("insert into BenhNhan_BenhNen values(?,?,?)",patient(user(h).id()),b.get("id"),b.get("note"));return Map.of("message","Đã thêm bệnh nền");}
   @DeleteMapping("/patient/background-diseases/{id}") Object deleteDisease(@RequestHeader("Authorization") String h,@PathVariable long id){db.update("delete from BenhNhan_BenhNen where MaBenhNhan=? and MaBenhNen=?",patient(user(h).id()),id);return Map.of("message","Đã xóa");}
   @GetMapping("/patient/allergies") Object patientAllergies(@RequestHeader("Authorization") String h){return list("select d.MaDiUng id,d.TenDiUng name,x.MucDo severity from BenhNhan_DiUng x join DiUng d on d.MaDiUng=x.MaDiUng where x.MaBenhNhan=?",patient(user(h).id()));}
@@ -75,6 +80,12 @@ public class ApiController {
 
   @GetMapping("/admin/statistics") Object statistics(@RequestHeader("Authorization") String h){var u=user(h);staff(u);return Map.of("users",db.queryForObject("select count(*) from TaiKhoan",Integer.class),"drugs",db.queryForObject("select count(*) from Thuoc",Integer.class),"diseases",db.queryForObject("select count(*) from BenhNen",Integer.class),"lookups",db.queryForObject("select count(*) from LichSuTraCuu",Integer.class));}
   @GetMapping("/warning-rules") Object rules(@RequestHeader("Authorization") String h){staff(user(h));return list("select q.MaQuyTac id,h.TenHoatChat ingredient,b.TenBenh disease,q.MucDo severity,q.NoiDung content,q.TrangThai status from QuyTacCanhBao q join HoatChat h on h.MaHoatChat=q.MaHoatChat join BenhNen b on b.MaBenhNen=q.MaBenhNen order by q.MaQuyTac desc");}
+  @GetMapping("/warning-rules/{id}") Object getRule(@RequestHeader("Authorization") String h,@PathVariable long id){
+    staff(user(h));
+    var x = list("select MaQuyTac id, MaHoatChat ingredientId, MaBenhNen diseaseId, MucDo severity, NoiDung content, KhuyenNghi recommendation, Nguon source from QuyTacCanhBao where MaQuyTac=?", id);
+    if(x.isEmpty()) throw new IllegalArgumentException("Không tìm thấy quy tắc");
+    return x.getFirst();
+  }
   @PostMapping("/warning-rules/{id}/approve") Object approve(@RequestHeader("Authorization") String h,@PathVariable long id){var u=user(h);staff(u);db.update("update QuyTacCanhBao set TrangThai='DaDuyet' where MaQuyTac=?",id);db.update("insert into AuditLog(MaTaiKhoan,HanhDong,DoiTuong,ChiTiet) values(?,?,?,?)",u.id(),"Duyệt","QuyTacCanhBao","Mã "+id);return Map.of("message","Đã duyệt quy tắc");}
   @GetMapping("/admin/users") Object users(@RequestHeader("Authorization") String h){var u=user(h);if(!"ADMIN".equals(u.role()))throw new SecurityException("Chỉ quản trị viên được xem tài khoản");return list("select MaTaiKhoan id,TenDangNhap username,HoTen fullName,VaiTro role,TrangThai active,NgayTao createdAt from TaiKhoan order by NgayTao desc");}
   @PutMapping("/admin/users/{id}/lock") Object lock(@RequestHeader("Authorization") String h,@PathVariable long id){var u=user(h);if(!"ADMIN".equals(u.role()))throw new SecurityException("Chỉ quản trị viên được khóa tài khoản");if(id==u.id())throw new IllegalArgumentException("Không thể tự khóa tài khoản đang dùng");db.update("update TaiKhoan set TrangThai=0 where MaTaiKhoan=?",id);audit(u,"Khóa","TaiKhoan","Mã "+id);return Map.of("message","Đã khóa tài khoản");}

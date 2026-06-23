@@ -14,15 +14,14 @@ spring:
 app:
   disclaimer: "Thông tin chỉ mang tính tham khảo, không thay thế tư vấn của bác sĩ hoặc dược sĩ."
   google-client-id: ${GOOGLE_CLIENT_ID:}
+  gemini-api-key: ${GEMINI_API_KEY:}
 ---
 spring:
   config:
     activate:
       on-profile: sqlserver
   datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=HTTraCuuThuoc_AI;encrypt=true;trustServerCertificate=true}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: "jdbc:sqlserver://DESKTOP-401B6OP\\SQLEXPRESSS;databaseName=HTTraCuuThuoc_AI;integratedSecurity=true;encrypt=false;trustServerCertificate=true"
   sql:
     init:
       mode: never
