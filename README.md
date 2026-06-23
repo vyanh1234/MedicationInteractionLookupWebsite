@@ -428,3 +428,10 @@ Khi demo, hệ thống phải làm được tối thiểu:
 6. Hệ thống kiểm tra tương tác với thuốc đang dùng.
 7. Hệ thống lưu lịch sử tra cứu.
 8. Admin/dược sĩ quản lý thuốc, hoạt chất, bệnh nền và quy tắc cảnh báo.
+
+## 11. Phiên bản phát hành
+### Phiên bản 1.0 (v1.0)
+- Tích hợp kết nối database SQL Server và sửa lỗi TLS.
+- Hoàn thiện chức năng CRUD Quy tắc cảnh báo cho Admin.
+- Tích hợp AI giải thích tương tác thuốc và chatbot hỗ trợ (Gemini API).
+- Hoàn thiện giao diện UI US-05 và bộ lọc xác thực (RbacInterceptor).
