@@ -21,7 +21,7 @@ spring:
     activate:
       on-profile: sqlserver
   datasource:
-    url: "jdbc:sqlserver://EMHAYONHA;databaseName=HTTraCuuThuoc_AI;integratedSecurity=true;encrypt=false;trustServerCertificate=true"
+    url: "jdbc:sqlserver://DESKTOP-401B6OP\\SQLEXPRESSS;databaseName=HTTraCuuThuoc_AI;integratedSecurity=true;encrypt=false;trustServerCertificate=true"
   sql:
     init:
       mode: never
