@@ -43,13 +43,39 @@ async function updateNav() {
 
 function showLogin() {
   authDialog.showModal();
-  $('#authContent').innerHTML = `<h2>Chào mừng trở lại</h2><p class="muted">Đăng nhập để nhận cảnh báo theo hồ sơ sức khỏe.</p><form onsubmit="login(event)"><div class="field"><label>Tên đăng nhập</label><input name="username" required value="patient"></div><div class="field"><label>Mật khẩu</label><input name="password" type="password" required value="123456"></div><div class="demo">Demo: patient / doctor / admin — mật khẩu <b>123456</b></div><button style="width:100%">Đăng nhập</button></form><div id="googleArea"><div class="divider"><span>hoặc</span></div><button class="google-btn" onclick="googleStart()">G&nbsp; Đăng nhập bằng Google</button></div><p>Chưa có tài khoản? <a href="#" onclick="showRegister()">Đăng ký</a></p>`;
+  $('#authContent').innerHTML = `
+    <h2>Chào mừng trở lại</h2>
+    <p class="muted">Đăng nhập để nhận cảnh báo theo hồ sơ sức khỏe.</p>
+    <form onsubmit="login(event)">
+      <div class="field"><label>Tên đăng nhập</label><input name="username" required></div>
+      <div class="field"><label>Mật khẩu</label><input name="password" type="password" required></div>
+      <button style="width:100%">Đăng nhập</button>
+    </form>
+    <div id="googleArea">
+      <div class="divider"><span>hoặc</span></div>
+      <div id="googleBtn" style="display: flex; justify-content: center;"></div>
+    </div>
+    <p style="margin-top: 20px;">Chưa có tài khoản? <a href="#" onclick="showRegister()">Đăng ký</a></p>
+  `;
   configureGoogleButton();
 }
 
 function showRegister() {
   authDialog.showModal();
-  $('#authContent').innerHTML = `<h2>Tạo tài khoản</h2><form onsubmit="register(event)"><div class="field"><label>Họ và tên</label><input name="fullName" required></div><div class="field"><label>Email hoặc tên đăng nhập</label><input name="username" minlength="4" required></div><div class="field"><label>Mật khẩu</label><input name="password" type="password" minlength="6" required></div><button style="width:100%">Đăng ký</button></form><div id="googleArea"><div class="divider"><span>hoặc</span></div><button class="google-btn" onclick="googleStart()">G&nbsp; Tiếp tục với Google</button></div>`;
+  $('#authContent').innerHTML = `
+    <h2>Tạo tài khoản</h2>
+    <form onsubmit="register(event)">
+      <div class="field"><label>Họ và tên</label><input name="fullName" required></div>
+      <div class="field"><label>Email hoặc tên đăng nhập</label><input name="username" minlength="4" required></div>
+      <div class="field"><label>Mật khẩu</label><input name="password" type="password" minlength="6" required></div>
+      <button style="width:100%">Đăng ký</button>
+    </form>
+    <div id="googleArea">
+      <div class="divider"><span>hoặc</span></div>
+      <div id="googleBtn" style="display: flex; justify-content: center;"></div>
+    </div>
+    <p style="margin-top: 20px;">Đã có tài khoản? <a href="#" onclick="showLogin()">Đăng nhập</a></p>
+  `;
   configureGoogleButton();
 }
 
@@ -83,23 +109,16 @@ async function register(e) {
 
 async function configureGoogleButton() {
   try {
-    const c = await api('/auth/google', { method: 'POST' });
+    const c = cache.google || await api('/auth/google', { method: 'POST' });
     cache.google = c;
     const area = $('#googleArea');
-    if (area && !c.enabled) area.innerHTML = '<p class="muted" style="text-align:center">Chức năng đăng nhập bằng Google hiện chưa được kích hoạt.</p>';
-  } catch {
-    const area = $('#googleArea');
-    if (area) area.style.display = 'none';
-  }
-}
-
-async function googleStart() {
-  try {
-    const c = cache.google || await api('/auth/google', { method: 'POST' });
+    if (!area) return;
+    
     if (!c.enabled) {
-      toast('Chức năng đăng nhập bằng Google hiện chưa được kích hoạt.');
+      area.innerHTML = '<p class="muted" style="text-align:center">Chức năng đăng nhập bằng Google hiện chưa được kích hoạt.</p>';
       return;
     }
+    
     if (!window.google) {
       await new Promise((ok, no) => {
         const s = document.createElement('script');
@@ -109,10 +128,21 @@ async function googleStart() {
         document.head.appendChild(s);
       });
     }
+    
     google.accounts.id.initialize({ client_id: c.clientId, callback: handleGoogleCredential });
-    google.accounts.id.prompt();
+    
+    const btnContainer = $('#googleBtn');
+    if (btnContainer) {
+      google.accounts.id.renderButton(btnContainer, { 
+        theme: 'outline', 
+        size: 'large',
+        text: location.hash === '#profile' || location.hash === '#register' ? 'signup_with' : 'signin_with',
+        width: 300
+      });
+    }
   } catch (e) {
-    toast('Không thể kết nối dịch vụ đăng nhập Google lúc này.');
+    const area = $('#googleArea');
+    if (area) area.style.display = 'none';
   }
 }
 
@@ -215,7 +245,7 @@ async function lookup() {
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input id="q" autocomplete="off" placeholder="Nhập tên thuốc (VD: Advil, Panadol, Aspirin...)" oninput="onDrugInput(this.value)" onkeydown="if(event.key==='Escape')hideSuggestions()">
+        <input id="q" autocomplete="off" placeholder="Nhập tên thuốc (VD: Advil, Panadol, Aspirin...)" oninput="onDrugInput(this.value)" onkeydown="if(event.key==='Escape'){ hideSuggestions(); } else if(event.key==='Enter'){ hideSuggestions(); loadDrugs(this.value); }">
       </div>
       <div id="suggestions" class="suggestions" hidden></div>
     </div>
@@ -392,10 +422,27 @@ async function profileTab(tab, btn) {
 
 async function saveProfile(e) {
   e.preventDefault();
-  await api('/patient/profile', { method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
-  toast('Đã lưu hồ sơ');
-}
+  try {
+    const formData = Object.fromEntries(new FormData(e.target));
 
+    await api('/patient/profile', { method: 'PUT', body: JSON.stringify(formData) });
+
+    if (me && formData.fullName) {
+      me.fullName = formData.fullName;
+      localStorage.setItem('user', JSON.stringify(me)); // Lưu lại vào Local Storage
+      
+      await updateNav(); 
+      
+      if (location.hash === '' || location.hash === '#home') {
+        home();
+      }
+    }
+    
+    toast('Đã lưu hồ sơ');
+  } catch (e) {
+    toast(e.message);
+  }
+}
 window.toggleAddForm = function () {
   const formEl = $('#add-health-form');
   if (formEl) {
@@ -540,7 +587,8 @@ async function removeHealth(tab, id) {
 
 async function history() {
   if (!guardPatient()) return;
-  app.innerHTML = `<div class="page-head"><h1>Lịch sử tra cứu</h1></div><section class="section"><div id="history" class="card"><div class="empty">Đang tải…</div></div></section>`;
+  // Đã dời <section class="section"> lên đầu
+  app.innerHTML = `<section class="section"><div class="page-head"><h1>Lịch sử tra cứu</h1></div><div id="history" class="card"><div class="empty">Đang tải…</div></div></section>`;
   try {
     const xs = await api('/lookup/history');
     $('#history').innerHTML = xs.length ? xs.map(x => `<div class="list-row"><div class="icon">⌕</div><div class="grow"><b>${x.drug}</b><div class="muted">${new Date(x.time).toLocaleString('vi-VN')} · ${x.warningCount} cảnh báo</div></div><span class="severity ${x.severity}">${labelSeverity(x.severity)}</span></div>`).join('') : '<div class="empty">Bạn chưa có lần tra cứu nào.</div>';
@@ -551,7 +599,8 @@ async function history() {
 
 async function notifications() {
   if (!guardPatient()) return;
-  app.innerHTML = `<div class="page-head"><h1>Thông báo</h1></div><section class="section"><div id="notices" class="card"><div class="empty">Đang tải…</div></div></section>`;
+  // Đã dời <section class="section"> lên đầu
+  app.innerHTML = `<section class="section"><div class="page-head"><h1>Thông báo</h1></div><div id="notices" class="card"><div class="empty">Đang tải…</div></div></section>`;
   try {
     const xs = await api('/ai/approved');
     $('#notices').innerHTML = xs.length ? xs.map(x => `<div class="list-row"><div class="icon">✓</div><div class="grow"><b>Giải thích chuyên môn đã được duyệt</b><p>${x.content}</p><small class="muted">Nguồn: ${x.dataSource}</small></div></div>`).join('') : '<div class="empty">Bạn chưa có thông báo mới.</div>';
@@ -574,8 +623,9 @@ async function admin() {
 }
 
 async function professionalDashboard() {
-  app.innerHTML = `<div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc và duyệt nội dung AI.</p></div>
-    <section class="section">
+  // Đã dời <section class="section"> lên đầu và nhóm lại gọn gàng
+  app.innerHTML = `<section class="section">
+        <div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc và duyệt nội dung AI.</p></div>
         <h2>Nội dung AI chờ duyệt</h2>
         <div id="aiReview" class="card"><div class="empty">Đang tải…</div></div>
         
@@ -642,7 +692,7 @@ async function professionalDashboard() {
 }
 
 async function adminDashboard() {
-  app.innerHTML = `<div class="page-head"><h1>Dashboard quản trị</h1><p class="muted">Tài khoản, phân quyền, nhật ký và thống kê hệ thống.</p></div><section class="section"><div id="stats" class="stats"></div><div class="grid" style="margin-top:24px"><div class="card"><h2>Thuốc bị cảnh báo nhiều</h2><div id="topDrugs"></div></div><div class="card"><h2>Cảnh báo theo mức độ</h2><div id="warningChart"></div></div></div><h2 style="margin-top:35px">Quản lý tài khoản</h2><div id="users" class="card"></div></section>`;
+  app.innerHTML = `<section class="section"><div class="page-head"><h1>Dashboard quản trị</h1><p class="muted">Tài khoản, phân quyền, nhật ký và thống kê hệ thống.</p></div><div id="stats" class="stats"></div><div class="grid" style="margin-top:24px"><div class="card"><h2>Thuốc bị cảnh báo nhiều</h2><div id="topDrugs"></div></div><div class="card"><h2>Cảnh báo theo mức độ</h2><div id="warningChart"></div></div></div><h2 style="margin-top:35px">Quản lý tài khoản</h2><div id="users" class="card"></div></section>`;
   try {
     const [s, u] = await Promise.all([api('/admin/dashboard/summary'), api('/admin/users')]);
     $('#stats').innerHTML = [['Tổng tài khoản', s.tongTaiKhoan], ['Bệnh nhân', s.tongBenhNhan], ['Lượt tra cứu', s.tongLuotTraCuu]].map(x => `<div class="card stat"><div class="muted">${x[0]}</div><b>${x[1]}</b></div>`).join('');
