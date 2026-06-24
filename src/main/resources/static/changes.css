@@ -382,3 +382,350 @@
   transform: translate(1px, -1px);
 }
 
+/* Modal Dialogs */
+dialog {
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  max-width: 500px;
+  width: 90%;
+  padding: 24px;
+  overflow: visible;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+dialog h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--ink);
+}
+
+dialog .close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+dialog .close:hover {
+  color: var(--ink);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.form-actions button {
+  min-width: 100px;
+}
+
+/* Data Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+table thead {
+  background: var(--bg);
+  border-bottom: 2px solid var(--line);
+}
+
+table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+table tbody tr:hover {
+  background: var(--bg);
+}
+
+table td b {
+  color: var(--ink);
+}
+
+table td small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Admin Features */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--ink);
+}
+
+.page-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.page-head button {
+  white-space: nowrap;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.search-container input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(43, 89, 255, 0.1);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.list-row .icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--primary-light);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.list-row .grow {
+  flex: 1;
+}
+
+.list-row .grow b {
+  display: block;
+  color: var(--ink);
+}
+
+.list-row .grow .muted {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.list-row .severity {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.list-row .severity.Cao,
+.list-row .severity.Nặng,
+.list-row .severity.Nguy\ hiểm {
+  background: #FEE2E2;
+  color: var(--red);
+}
+
+.list-row .severity.TrungBinh,
+.list-row .severity.Vừa {
+  background: #FEF3C7;
+  color: var(--amber);
+}
+
+.list-row .severity.Thap,
+.list-row .severity.Nhẹ {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.btn-icon-danger {
+  background: transparent;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.btn-icon-danger:hover {
+  background: #FEE2E2;
+}
+
+/* Admin Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card.stat {
+  padding: 20px !important;
+  text-align: center;
+  background: linear-gradient(135deg, var(--primary-light) 0%, rgba(43, 89, 255, 0.05) 100%);
+  border: 1px solid rgba(43, 89, 255, 0.1);
+}
+
+.card.stat b {
+  font-size: 24px;
+  display: block;
+  margin-top: 8px;
+  color: var(--primary);
+}
+
+/* Admin Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Response Classes */
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.highlight {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.code-badge {
+  display: inline-block;
+  background: var(--line);
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: monospace;
+  margin-left: 6px;
+}
+
+/* Profile Cards */
+.profile-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.profile-item-info {
+  flex: 1;
+}
+
+.profile-item-title {
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  table {
+    font-size: 12px;
+  }
+  
+  table th,
+  table td {
+    padding: 8px;
+  }
+  
+  dialog {
+    width: 95%;
+    padding: 16px;
+  }
+  
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

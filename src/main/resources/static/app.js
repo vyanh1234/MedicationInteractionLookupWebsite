@@ -1,4 +1,7 @@
 const $ = s => document.querySelector(s), app = $('#app'), token = () => localStorage.token, authDialog = $('#authDialog');
+const style = document.createElement('style');
+style.innerHTML = `dialog { max-height: 85vh; overflow-y: auto; scrollbar-width: thin; border-radius: 12px; } dialog form { padding-bottom: 20px; }`;
+document.head.appendChild(style);
 let me = JSON.parse(localStorage.getItem('user') || 'null'), cache = {};
 
 async function api(path, opt = {}) {
@@ -297,7 +300,18 @@ async function loadDrugs(q) {
     drugsEl.innerHTML = '<div class="empty">Đang tải…</div>';
     const xs = await api('/drugs?keyword=' + encodeURIComponent(q));
     cache.drugs = xs;
-    drugsEl.innerHTML = xs.length ? xs.map(x => `<article class="card drug" onclick="checkDrug(${x.id})"><span class="tag">${x.dosageForm || 'Thuốc'}</span><h3>${x.name}</h3><div class="muted">${x.ingredients || ''} · ${x.strength || ''}</div><p>${x.description || ''}</p><b style="color:var(--primary)">Kiểm tra an toàn →</b></article>`).join('') : `<div class="empty">Không tìm thấy thuốc phù hợp.</div>`;
+    
+    // Đã thay đổi x.name -> x.TenThuoc, x.description -> x.MoTa, ... để khớp với Backend
+    drugsEl.innerHTML = xs.length ? xs.map(x => `
+      <article class="card drug" onclick="checkDrug(${x.id})">
+        <span class="tag">${x.DangBaoChe || x.dosageForm || 'Thuốc'}</span>
+        <h3>${x.TenThuoc || x.name || 'Chưa rõ tên'}</h3>
+        <div class="muted">${x.HoatChat || x.ingredients || ''} ${x.HamLuong ? '· ' + x.HamLuong : ''}</div>
+        <p>${x.MoTa || x.description || ''}</p>
+        <b style="color:var(--primary)">Kiểm tra an toàn →</b>
+      </article>
+    `).join('') : `<div class="empty">Không tìm thấy thuốc phù hợp.</div>`;
+    
   } catch (e) {
     toast(e.message);
   }
@@ -357,7 +371,7 @@ async function checkDrug(id) {
 async function requestAi(index) {
   const w = cache.lookup.warnings[index], source = ({ 'Bệnh nền': 'QuyTacCanhBao', 'Dị ứng': 'CanhBaoDiUng_HoatChat', 'Tương tác': 'TuongTacHoatChat' })[w.type];
   try {
-    const r = await api('/ai/generate', { method: 'POST', body: JSON.stringify({ question: 'Giải thích cảnh báo này dễ hiểu', input: w.content, source }) });
+    const r = await api('/ai/generate', { method: 'POST', body: JSON.stringify({ question: 'Giải thích cảnh báo này d��� hiểu', input: w.content, source }) });
     toast(r.message);
   } catch (e) {
     toast(e.message);
@@ -480,7 +494,7 @@ async function renderHealthList(tab) {
           </div>
           <div class="profile-item-meta">
             ${x.category ? `Nhóm: ${x.category}` : 'Không rõ nhóm'}
-            ${x.note ? ` • Mức độ: <span class="highlight">${x.note}</span>` : ''}
+            ${x.note ? ` • Ghi chú: <span class="highlight">${x.note}</span>` : ''}
           </div>
         </div>
         <button class="btn-icon-danger" onclick="removeHealth('${tab}',${x.id})" title="Xóa">
@@ -528,7 +542,7 @@ async function renderHealthList(tab) {
   $('#profileBody').innerHTML = `
     <div class="profile-list-card">
       <div class="profile-list-header">
-        <h3>Danh cách ${cfg[4]} (${mine.length})</h3>
+        <h3>Danh sách ${cfg[4]} (${mine.length})</h3>
         <button onclick="toggleAddForm()">${cfg[3]}</button>
       </div>
       <div class="profile-items-container">
@@ -548,8 +562,17 @@ async function renderHealthList(tab) {
         ${tab === 'drugs' ? `
           <div class="field"><label>Liều dùng</label><input name="dose" placeholder="Ví dụ: 1 viên"></div>
           <div class="field"><label>Tần suất</label><input name="frequency" placeholder="Ví dụ: Sau ăn sáng"></div>
+        ` : tab === 'allergies' ? `
+          <div class="field">
+            <label>Mức độ phản ứng</label>
+            <select name="severity">
+              <option value="Cao">Nguy cơ cao (Nguy hiểm)</option>
+              <option value="TrungBinh">Trung bình (Cần thận trọng)</option>
+              <option value="Thap">Nguy cơ thấp (Nhẹ)</option>
+            </select>
+          </div>
         ` : `
-          <div class="field"><label>Ghi chú / mức độ</label><input name="note" placeholder="Ví dụ: Nhẹ, trung bình, ..."></div>
+          <div class="field"><label>Ghi chú</label><input name="note" placeholder="Ví dụ: Phát hiện năm 2022..."></div>
         `}
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
           <button type="button" class="ghost" onclick="toggleAddForm()">Hủy</button>
@@ -625,7 +648,36 @@ async function admin() {
 async function professionalDashboard() {
   // Đã dời <section class="section"> lên đầu và nhóm lại gọn gàng
   app.innerHTML = `<section class="section">
-        <div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc và duyệt nội dung AI.</p></div>
+        <div class="page-head"><h1>Trung tâm chuyên môn</h1><p class="muted">Quản lý quy tắc, duyệt nội dung AI và quản lý dữ liệu.</p></div>
+        
+        <div class="grid" style="margin-bottom: 30px;">
+          <div class="card" style="cursor:pointer; padding: 24px; text-align: center; border: 2px solid var(--primary-light); border-radius: 12px; transition: all 0.2s;" onclick="manageDrugs()">
+            <div style="font-size: 32px; margin-bottom: 8px;">💊</div>
+            <h3 style="margin: 0 0 4px;">Quản lý Thuốc</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 12px;">Thêm, sửa, xóa thuốc</p>
+          </div>
+          <div class="card" style="cursor:pointer; padding: 24px; text-align: center; border: 2px solid var(--primary-light); border-radius: 12px; transition: all 0.2s;" onclick="manageIngredients()">
+            <div style="font-size: 32px; margin-bottom: 8px;">⚗️</div>
+            <h3 style="margin: 0 0 4px;">Quản lý Hoạt Chất</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 12px;">Quản lý thành phần hoạt tính</p>
+          </div>
+          <div class="card" style="cursor:pointer; padding: 24px; text-align: center; border: 2px solid var(--primary-light); border-radius: 12px; transition: all 0.2s;" onclick="manageDiseases()">
+            <div style="font-size: 32px; margin-bottom: 8px;">🏥</div>
+            <h3 style="margin: 0 0 4px;">Quản lý Bệnh Nền</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 12px;">Quản lý danh mục bệnh nền</p>
+          </div>
+          <div class="card" style="cursor:pointer; padding: 24px; text-align: center; border: 2px solid var(--primary-light); border-radius: 12px; transition: all 0.2s;" onclick="manageAllergies()">
+            <div style="font-size: 32px; margin-bottom: 8px;">🚫</div>
+            <h3 style="margin: 0 0 4px;">Quản lý Dị Ứng</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 12px;">Quản lý dị ứng và phản ứng</p>
+          </div>
+          <div class="card" style="cursor:pointer; padding: 24px; text-align: center; border: 2px solid var(--primary-light); border-radius: 12px; transition: all 0.2s;" onclick="manageInteractions()">
+            <div style="font-size: 32px; margin-bottom: 8px;">🔗</div>
+            <h3 style="margin: 0 0 4px;">Tương Tác Thuốc</h3>
+            <p style="margin: 0; color: var(--muted); font-size: 12px;">Quản lý tương tác giữa thuốc</p>
+          </div>
+        </div>
+
         <h2>Nội dung AI chờ duyệt</h2>
         <div id="aiReview" class="card"><div class="empty">Đang tải…</div></div>
         
@@ -738,6 +790,515 @@ async function decideAi(id, action) {
     const r = await api('/ai/' + action, { method: 'POST', body: JSON.stringify({ id }) });
     toast(r.message);
     admin();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+// --- ADMIN MANAGEMENT FUNCTIONS ---
+
+async function manageDrugs() {
+  if (!me || (me.role !== 'DUOC_SI' && me.role !== 'BAC_SI' && me.role !== 'ADMIN')) {
+    location.hash = 'admin';
+    return;
+  }
+  app.innerHTML = `<section class="section">
+    <div class="page-head">
+      <h1>Quản lý Thuốc</h1>
+      <button onclick="openDrugDialog()">+ Thêm thuốc mới</button>
+    </div>
+    <div class="search-container" style="margin-bottom: 20px;">
+      <input type="text" placeholder="Tìm kiếm thuốc..." id="drugSearch" oninput="searchDrugs(this.value)" style="width:100%; padding:10px;">
+    </div>
+    <div id="drugsList" class="card"><div class="empty">Đang tải…</div></div>
+  </section>`;
+  try {
+    const drugs = await api('/drugs');
+    renderDrugsList(drugs);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function renderDrugsList(drugs) {
+  const html = drugs.length ? `<table style="width:100%"><thead><tr><th>Tên thuốc</th><th>Hàm lượng</th><th>Dạng</th><th>Đường dùng</th><th>Hoạt chất</th><th>Thao tác</th></tr></thead><tbody>${drugs.map(d => `<tr><td><b>${d.TenThuoc || '—'}</b>${d.CanKeDon ? ' <span class="tag severity Cao" style="font-size:10px; margin-left:4px;">Kê đơn</span>' : ''}</td><td>${d.HamLuong || '—'}</td><td>${d.DangBaoChe || '—'}</td><td>${d.DuongDung || '—'}</td><td><span class="muted">${d.HoatChat || 'Chưa cập nhật'}</span></td><td style="min-width:130px;"><button class="ghost" style="margin-right:8px;" onclick="editDrug(${d.id})">Sửa</button><button class="danger" onclick="deleteDrug(${d.id})">Xóa</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Không có thuốc nào</div>';
+  $('#drugsList').innerHTML = html;
+}
+
+function searchDrugs(q) {
+  api('/drugs?keyword=' + encodeURIComponent(q)).then(drugs => renderDrugsList(drugs)).catch(e => toast(e.message));
+}
+
+function openDrugDialog(id = null) {
+  const dialog = document.getElementById('authDialog');
+  document.getElementById('authContent').innerHTML = `
+    <form onsubmit="event.preventDefault(); saveDrug(${id || 'null'});" style="width: 650px; max-width: 100%;">
+      <h2>${id ? 'Chỉnh sửa' : 'Thêm'} Thuốc</h2>
+      
+      <div class="row">
+        <div class="field" style="flex: 2;"><label>Tên thuốc *</label><input type="text" id="d_TenThuoc" required></div>
+        <div class="field" style="flex: 1;"><label>Hàm lượng</label><input type="text" id="d_HamLuong" placeholder="VD: 500mg"></div>
+      </div>
+      
+      <div class="row">
+        <div class="field"><label>Tên quốc tế</label><input type="text" id="d_TenQuocTe"></div>
+        <div class="field"><label>Số đăng ký</label><input type="text" id="d_SoDangKy"></div>
+      </div>
+
+      <div class="row">
+        <div class="field"><label>Dạng bào chế</label><input type="text" id="d_DangBaoChe" placeholder="VD: Viên nén"></div>
+        <div class="field"><label>Đường dùng</label><input type="text" id="d_DuongDung" placeholder="VD: Uống"></div>
+      </div>
+
+      <div class="row">
+        <div class="field"><label>Loại thuốc</label><input type="text" id="d_LoaiThuoc" placeholder="VD: Kháng sinh, Giảm đau..."></div>
+        <div class="field"><label>Nhà sản xuất</label><input type="text" id="d_NhaSanXuat"></div>
+      </div>
+
+      <div class="field" style="flex-direction: row; align-items: center; gap: 8px; margin-bottom: 15px;">
+        <input type="checkbox" id="d_CanKeDon" style="width: auto; height: 16px; margin: 0;">
+        <label for="d_CanKeDon" style="margin: 0; cursor: pointer; color: var(--danger);">Thuốc kê đơn (Cần có chỉ định của bác sĩ)</label>
+      </div>
+
+      <div class="field"><label>Mô tả / Chỉ định</label><textarea id="d_MoTa" rows="2"></textarea></div>
+      <div class="field"><label>Hướng dẫn sử dụng</label><textarea id="d_HuongDan" rows="2"></textarea></div>
+      <div class="field"><label>Tác dụng phụ</label><textarea id="d_TacDungPhu" rows="2"></textarea></div>
+
+      <div class="form-actions" style="margin-top:15px; text-align:right;">
+        <button type="button" class="ghost" style="margin-right:8px;" onclick="document.getElementById('authDialog').close()">Hủy</button>
+        <button type="submit">Lưu</button>
+      </div>
+    </form>`;
+  
+  dialog.showModal();
+  
+  if (id) {
+    api('/drugs/' + id).then(drug => {
+      document.getElementById('d_TenThuoc').value = drug.TenThuoc || '';
+      document.getElementById('d_TenQuocTe').value = drug.TenQuocTe || '';
+      document.getElementById('d_SoDangKy').value = drug.SoDangKy || '';
+      document.getElementById('d_LoaiThuoc').value = drug.LoaiThuoc || '';
+      document.getElementById('d_DangBaoChe').value = drug.DangBaoChe || '';
+      document.getElementById('d_DuongDung').value = drug.DuongDung || '';
+      document.getElementById('d_HamLuong').value = drug.HamLuong || '';
+      document.getElementById('d_NhaSanXuat').value = drug.NhaSanXuat || '';
+      document.getElementById('d_MoTa').value = drug.MoTa || '';
+      document.getElementById('d_HuongDan').value = drug.HuongDanSuDung || '';
+      document.getElementById('d_TacDungPhu').value = drug.TacDungPhu || '';
+      document.getElementById('d_CanKeDon').checked = !!drug.CanKeDon;
+    }).catch(e => toast(e.message));
+  }
+}
+
+async function saveDrug(id) {
+  const body = {
+    TenThuoc: document.getElementById('d_TenThuoc').value.trim(),
+    TenQuocTe: document.getElementById('d_TenQuocTe').value.trim(),
+    SoDangKy: document.getElementById('d_SoDangKy').value.trim(),
+    LoaiThuoc: document.getElementById('d_LoaiThuoc').value.trim(),
+    DangBaoChe: document.getElementById('d_DangBaoChe').value.trim(),
+    DuongDung: document.getElementById('d_DuongDung').value.trim(),
+    HamLuong: document.getElementById('d_HamLuong').value.trim(),
+    NhaSanXuat: document.getElementById('d_NhaSanXuat').value.trim(),
+    MoTa: document.getElementById('d_MoTa').value.trim(),
+    HuongDanSuDung: document.getElementById('d_HuongDan').value.trim(),
+    TacDungPhu: document.getElementById('d_TacDungPhu').value.trim(),
+    CanKeDon: document.getElementById('d_CanKeDon').checked ? 1 : 0
+  };
+  
+  try {
+    if (id) {
+      await api('/drugs/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Đã cập nhật thuốc');
+    } else {
+      await api('/drugs', { method: 'POST', body: JSON.stringify(body) });
+      toast('Đã thêm thuốc mới');
+    }
+    document.getElementById('authDialog').close();
+    manageDrugs();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteDrug(id) {
+  if (!confirm('Xóa thuốc này?')) return;
+  try {
+    await api('/drugs/' + id, { method: 'DELETE' });
+    toast('Đã xóa thuốc');
+    manageDrugs();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function editDrug(id) {
+  openDrugDialog(id);
+}
+
+// --- Quản lý hoạt chất ---
+
+async function manageIngredients() {
+  if (!me || (me.role !== 'DUOC_SI' && me.role !== 'BAC_SI' && me.role !== 'ADMIN')) {
+    location.hash = 'admin';
+    return;
+  }
+  app.innerHTML = `<section class="section">
+    <div class="page-head">
+      <h1>Quản lý Hoạt Chất</h1>
+      <button onclick="openIngredientDialog()">+ Thêm hoạt chất mới</button>
+    </div>
+    <div class="search-container" style="margin-bottom: 20px;">
+      <input type="text" placeholder="Tìm kiếm hoạt chất..." id="ingredientSearch" oninput="searchIngredients(this.value)" style="width:100%; padding:10px;">
+    </div>
+    <div id="ingredientsList" class="card"><div class="empty">Đang tải…</div></div>
+  </section>`;
+  try {
+    const ingredients = await api('/ingredients');
+    renderIngredientsList(ingredients);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function renderIngredientsList(ingredients) {
+  const html = ingredients.length ? `<table style="width:100%"><thead><tr><th>Tên hoạt chất</th><th>Mô tả</th><th>Thao tác</th></tr></thead><tbody>${ingredients.map(ing => `<tr><td><b>${ing.TenHoatChat || ing.name}</b></td><td>${ing.MoTa || ing.description || '—'}</td><td><button class="ghost" style="margin-right:8px;" onclick="editIngredient(${ing.MaHoatChat || ing.id})">Sửa</button><button class="danger" onclick="deleteIngredient(${ing.MaHoatChat || ing.id})">Xóa</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Không có hoạt chất nào</div>';
+  $('#ingredientsList').innerHTML = html;
+}
+
+function searchIngredients(q) {
+  api('/ingredients?keyword=' + encodeURIComponent(q)).then(ings => renderIngredientsList(ings)).catch(e => toast(e.message));
+}
+
+function openIngredientDialog(id = null) {
+  // Thay vì tự tạo mới, chúng ta mượn luôn hộp thoại authDialog đang rảnh rỗi trên HTML
+  const dialog = document.getElementById('authDialog');
+  document.getElementById('authContent').innerHTML = `
+    <form onsubmit="event.preventDefault(); saveIngredient(${id || 'null'});">
+      <h2>${id ? 'Chỉnh sửa' : 'Thêm'} Hoạt chất</h2>
+      <div class="field"><label>Tên hoạt chất *</label><input type="text" id="ingName" required></div>
+      <div class="field"><label>Mô tả</label><textarea id="ingDesc" rows="3"></textarea></div>
+      <div class="form-actions" style="margin-top:15px; text-align:right;">
+        <button type="button" class="ghost" style="margin-right:8px;" onclick="document.getElementById('authDialog').close()">Hủy</button>
+        <button type="submit">Lưu</button>
+      </div>
+    </form>`;
+  dialog.showModal();
+  
+  if (id) {
+    api('/ingredients/' + id).then(ing => {
+      document.getElementById('ingName').value = ing.TenHoatChat || ing.name || '';
+      document.getElementById('ingDesc').value = ing.MoTa || ing.description || '';
+    }).catch(e => toast(e.message));
+  }
+}
+
+async function saveIngredient(id) {
+  const body = {
+    TenHoatChat: document.getElementById('ingName').value.trim(),
+    name: document.getElementById('ingName').value.trim(),
+    MoTa: document.getElementById('ingDesc').value.trim(),
+    description: document.getElementById('ingDesc').value.trim()
+  };
+  try {
+    if (id) {
+      await api('/ingredients/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Đã cập nhật hoạt chất');
+    } else {
+      await api('/ingredients', { method: 'POST', body: JSON.stringify(body) });
+      toast('Đã thêm hoạt chất mới');
+    }
+    document.getElementById('authDialog').close();
+    manageIngredients();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteIngredient(id) {
+  if (!confirm('Xóa hoạt chất này?')) return;
+  try {
+    await api('/ingredients/' + id, { method: 'DELETE' });
+    toast('Đã xóa hoạt chất');
+    manageIngredients();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function editIngredient(id) {
+  openIngredientDialog(id);
+}
+
+// --- Quản lý bệnh nền ---
+
+async function manageDiseases() {
+  if (!me || (me.role !== 'DUOC_SI' && me.role !== 'BAC_SI' && me.role !== 'ADMIN')) {
+    location.hash = 'admin';
+    return;
+  }
+  app.innerHTML = `<section class="section">
+    <div class="page-head">
+      <h1>Quản lý Bệnh Nền</h1>
+      <button onclick="openDiseaseDialog()">+ Thêm bệnh nền mới</button>
+    </div>
+    <div class="search-container" style="margin-bottom: 20px;">
+      <input type="text" placeholder="Tìm kiếm bệnh nền..." id="diseaseSearch" oninput="searchDiseases(this.value)" style="width:100%; padding:10px;">
+    </div>
+    <div id="diseasesList" class="card"><div class="empty">Đang tải…</div></div>
+  </section>`;
+  try {
+    const diseases = await api('/diseases');
+    renderDiseasesList(diseases);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function renderDiseasesList(diseases) {
+  const html = diseases.length ? `<table style="width:100%"><thead><tr><th>Tên bệnh</th><th>Tên thông dụng</th><th>Mã ICD</th><th>Mô tả</th><th>Thao tác</th></tr></thead><tbody>${diseases.map(d => `<tr><td><b>${d.TenBenh || d.name}</b></td><td>${d.TenThongDung || d.commonName || '—'}</td><td><span class="tag">${d.MaICD || d.icd || '—'}</span></td><td>${d.MoTa || d.description || '—'}</td><td><button class="ghost" style="margin-right:8px;" onclick="editDisease(${d.MaBenhNen || d.id})">Sửa</button><button class="danger" onclick="deleteDisease(${d.MaBenhNen || d.id})">Xóa</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Không có bệnh nền nào</div>';
+  $('#diseasesList').innerHTML = html;
+}
+
+function searchDiseases(q) {
+  api('/diseases?keyword=' + encodeURIComponent(q)).then(diseases => renderDiseasesList(diseases)).catch(e => toast(e.message));
+}
+
+function openDiseaseDialog(id = null) {
+  // Dùng chung authDialog để tránh kẹt DOM
+  const dialog = document.getElementById('authDialog');
+  document.getElementById('authContent').innerHTML = `
+    <form onsubmit="event.preventDefault(); saveDisease(${id || 'null'});">
+      <h2>${id ? 'Chỉnh sửa' : 'Thêm'} Bệnh Nền</h2>
+      <div class="field"><label>Tên bệnh *</label><input type="text" id="diseaseName" required></div>
+      <div class="field"><label>Tên thông dụng</label><input type="text" id="diseaseCommonName" placeholder="VD: Cao huyết áp"></div>
+      <div class="row">
+        <div class="field"><label>Nhóm bệnh</label><input type="text" id="diseaseCategory" placeholder="VD: Tim mạch, Nội tiết..."></div>
+        <div class="field"><label>Mã ICD</label><input type="text" id="diseaseIcd" placeholder="VD: I10, E11..."></div>
+      </div>
+      <div class="field"><label>Mô tả bệnh</label><textarea id="diseaseDescription" rows="3"></textarea></div>
+      <div class="form-actions" style="margin-top:15px; text-align:right;">
+        <button type="button" class="ghost" style="margin-right:8px;" onclick="document.getElementById('authDialog').close()">Hủy</button>
+        <button type="submit">Lưu</button>
+      </div>
+    </form>`;
+  dialog.showModal();
+  
+  if (id) {
+    api('/diseases/' + id).then(disease => {
+      document.getElementById('diseaseName').value = disease.TenBenh || disease.name || '';
+      document.getElementById('diseaseCommonName').value = disease.TenThongDung || disease.commonName || '';
+      document.getElementById('diseaseCategory').value = disease.NhomBenh || disease.category || '';
+      document.getElementById('diseaseIcd').value = disease.MaICD || disease.icd || '';
+      document.getElementById('diseaseDescription').value = disease.MoTa || disease.description || '';
+    }).catch(e => toast(e.message));
+  }
+}
+
+async function saveDisease(id) {
+  const body = {
+    name: document.getElementById('diseaseName').value.trim(),
+    commonName: document.getElementById('diseaseCommonName').value.trim(),
+    category: document.getElementById('diseaseCategory').value.trim(),
+    icd: document.getElementById('diseaseIcd').value.trim(),
+    description: document.getElementById('diseaseDescription').value.trim()
+  };
+  
+  try {
+    if (id) {
+      await api('/diseases/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Đã cập nhật bệnh nền');
+    } else {
+      await api('/diseases', { method: 'POST', body: JSON.stringify(body) });
+      toast('Đã thêm bệnh nền mới');
+    }
+    document.getElementById('authDialog').close();
+    manageDiseases();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteDisease(id) {
+  if (!confirm('Xóa bệnh nền này?')) return;
+  try {
+    await api('/diseases/' + id, { method: 'DELETE' });
+    toast('Đã xóa bệnh nền');
+    manageDiseases();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function editDisease(id) {
+  openDiseaseDialog(id);
+}
+
+// --- Quản lý dị ứng ---
+
+async function manageAllergies() {
+  if (!me || (me.role !== 'DUOC_SI' && me.role !== 'BAC_SI' && me.role !== 'ADMIN')) {
+    location.hash = 'admin';
+    return;
+  }
+  app.innerHTML = `<section class="section">
+    <div class="page-head">
+      <h1>Quản lý Dị Ứng</h1>
+      <button onclick="openAllergyDialog()">+ Thêm dị ứng mới</button>
+    </div>
+    <div class="search-container" style="margin-bottom: 20px;">
+      <input type="text" placeholder="Tìm kiếm dị ứng..." id="allergySearch" oninput="searchAllergies(this.value)" style="width:100%; padding:10px;">
+    </div>
+    <div id="allergiesList" class="card"><div class="empty">Đang tải…</div></div>
+  </section>`;
+  try {
+    const allergies = await api('/allergies');
+    renderAllergiesList(allergies);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function renderAllergiesList(allergies) {
+  const html = allergies.length ? `<table style="width:100%"><thead><tr><th>Loại dị ứng</th><th>Mô tả / Triệu chứng</th><th>Thao tác</th></tr></thead><tbody>${allergies.map(a => `<tr><td><b>${a.TenDiUng || a.name}</b></td><td>${a.MoTa || a.description || '—'}</td><td><button class="ghost" style="margin-right:8px;" onclick="editAllergy(${a.MaDiUng || a.id})">Sửa</button><button class="danger" onclick="deleteAllergy(${a.MaDiUng || a.id})">Xóa</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Không có dị ứng nào</div>';
+  $('#allergiesList').innerHTML = html;
+}
+
+function searchAllergies(q) {
+  api('/allergies?keyword=' + encodeURIComponent(q)).then(allergies => renderAllergiesList(allergies)).catch(e => toast(e.message));
+}
+
+function openAllergyDialog(id = null) {
+  const dialog = document.getElementById('authDialog');
+  document.getElementById('authContent').innerHTML = `
+    <form onsubmit="event.preventDefault(); saveAllergy(${id || 'null'});">
+      <h2>${id ? 'Chỉnh sửa' : 'Thêm'} Dị Ứng</h2>
+      <div class="field"><label>Loại dị ứng *</label><input type="text" id="allergyName" required></div>
+      <div class="field"><label>Mô tả / Triệu chứng</label><textarea id="allergySymptoms" rows="3"></textarea></div>
+      <div class="form-actions" style="margin-top:15px; text-align:right;">
+        <button type="button" class="ghost" style="margin-right:8px;" onclick="document.getElementById('authDialog').close()">Hủy</button>
+        <button type="submit">Lưu</button>
+      </div>
+    </form>`;
+  dialog.showModal();
+  
+  if (id) {
+    api('/allergies/' + id).then(allergy => {
+      document.getElementById('allergyName').value = allergy.TenDiUng || allergy.name || '';
+      document.getElementById('allergySymptoms').value = allergy.MoTa || allergy.description || '';
+    }).catch(e => toast(e.message));
+  }
+}
+
+async function saveAllergy(id) {
+  const body = {
+    name: document.getElementById('allergyName').value.trim(),
+    description: document.getElementById('allergySymptoms').value.trim()
+  };
+  
+  try {
+    if (id) {
+      await api('/allergies/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Đã cập nhật dị ứng');
+    } else {
+      await api('/allergies', { method: 'POST', body: JSON.stringify(body) });
+      toast('Đã thêm dị ứng mới');
+    }
+    document.getElementById('authDialog').close();
+    manageAllergies();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteAllergy(id) {
+  if (!confirm('Xóa dị ứng này?')) return;
+  try {
+    await api('/allergies/' + id, { method: 'DELETE' });
+    toast('Đã xóa dị ứng');
+    manageAllergies();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function editAllergy(id) {
+  openAllergyDialog(id);
+}
+
+// --- Quản lý tương tác thuốc ---
+
+async function manageInteractions() {
+  if (!me || (me.role !== 'DUOC_SI' && me.role !== 'BAC_SI' && me.role !== 'ADMIN')) {
+    location.hash = 'admin';
+    return;
+  }
+  app.innerHTML = `<section class="section">
+    <div class="page-head">
+      <h1>Quản lý Tương Tác Thuốc</h1>
+      <button onclick="openInteractionDialog()">+ Thêm tương tác mới</button>
+    </div>
+    <div class="search-container" style="margin-bottom: 20px;">
+      <input type="text" placeholder="Tìm kiếm theo tên hoạt chất..." id="interactionSearch" oninput="searchInteractions(this.value)" style="width:100%; padding:10px;">
+    </div>
+    <div id="interactionsList" class="card"><div class="empty">Đang tải…</div></div>
+  </section>`;
+  try {
+    const interactions = await api('/drug-interactions');
+    renderInteractionsList(interactions);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function renderInteractionsList(interactions) {
+  const html = interactions.length ? `<table style="width:100%"><thead><tr><th>Hoạt chất 1</th><th>Hoạt chất 2</th><th>Mức độ</th><th>Hậu quả</th><th>Thao tác</th></tr></thead><tbody>${interactions.map(i => `<tr><td>${i.HoatChat1 || i.ingredient1 || '—'}</td><td>${i.HoatChat2 || i.ingredient2 || '—'}</td><td><span class="tag severity ${i.MucDo || i.severity}">${labelSeverity(i.MucDo || i.severity)}</span></td><td>${i.HauQua || i.description || '—'}</td><td><button class="danger" onclick="deleteInteraction(${i.MaTuongTac || i.id})">Xóa</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Không có tương tác nào</div>';
+  $('#interactionsList').innerHTML = html;
+}
+
+function searchInteractions(q) {
+  api('/drug-interactions?keyword=' + encodeURIComponent(q)).then(interactions => renderInteractionsList(interactions)).catch(e => toast(e.message));
+}
+
+function openInteractionDialog(id = null) {
+  const dialog = document.getElementById('interactionDialog');
+  const form = document.getElementById('interactionForm');
+  form.reset();
+  
+  api('/ingredients').then(ings => {
+    document.getElementById('interactionIngredient1').innerHTML = ings.map(ing => `<option value="${ing.MaHoatChat || ing.id}">${ing.TenHoatChat || ing.name}</option>`).join('');
+    document.getElementById('interactionIngredient2').innerHTML = ings.map(ing => `<option value="${ing.MaHoatChat || ing.id}">${ing.TenHoatChat || ing.name}</option>`).join('');
+    document.getElementById('interactionDialog').dataset.id = id || '';
+  }).catch(e => toast(e.message));
+  
+  dialog.showModal();
+}
+
+async function saveInteraction() {
+  const body = {
+    MaHoatChat1: parseInt(document.getElementById('interactionIngredient1').value),
+    MaHoatChat2: parseInt(document.getElementById('interactionIngredient2').value),
+    MucDo: document.getElementById('interactionSeverity').value,
+    HauQua: document.getElementById('interactionDescription').value.trim(),
+    KhuyenNghi: document.getElementById('interactionRecommendation').value.trim()
+  };
+  
+  try {
+    await api('/drug-interactions', { method: 'POST', body: JSON.stringify(body) });
+    toast('Đã thêm tương tác thuốc mới');
+    document.getElementById('interactionDialog').close();
+    manageInteractions();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteInteraction(id) {
+  if (!confirm('Xóa tương tác này?')) return;
+  try {
+    await api('/drug-interactions/' + id, { method: 'DELETE' });
+    toast('Đã xóa tương tác');
+    manageInteractions();
   } catch (e) {
     toast(e.message);
   }

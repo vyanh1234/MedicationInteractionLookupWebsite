@@ -65,6 +65,184 @@
     <div id="authContent"></div>
   </dialog>
 
+  <!-- Modal cho quản lý quy tắc cảnh báo -->
+  <dialog id="ruleDialog">
+    <button class="close" onclick="document.getElementById('ruleDialog').close()">×</button>
+    <h2 id="ruleModalTitle">Thêm Quy Tắc Mới</h2>
+    <form id="ruleForm" onsubmit="event.preventDefault(); saveRule();">
+      <div class="field">
+        <label>Hoạt chất *</label>
+        <select id="ruleIngredient" required></select>
+      </div>
+      <div class="field">
+        <label>Bệnh nền *</label>
+        <select id="ruleDisease" required></select>
+      </div>
+      <div class="field">
+        <label>Mức độ cảnh báo *</label>
+        <select id="ruleSeverity" required>
+          <option value="Cao">Cao</option>
+          <option value="TrungBinh">Trung bình</option>
+          <option value="Thap">Thấp</option>
+          <option value="ChuaDuDuLieu">Chưa đủ dữ liệu</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nội dung cảnh báo</label>
+        <textarea id="ruleContentText" rows="4" placeholder="Mô tả chi tiết lý do cảnh báo..."></textarea>
+      </div>
+      <div class="field">
+        <label>Khuyến nghị</label>
+        <textarea id="ruleRecommendation" rows="3" placeholder="Khuyến nghị cho bệnh nhân..."></textarea>
+      </div>
+      <div class="field">
+        <label>Nguồn tham khảo</label>
+        <input type="text" id="ruleSource" placeholder="Tên tài liệu/nghiên cứu...">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="document.getElementById('ruleDialog').close()">Hủy</button>
+        <button type="submit">Lưu quy tắc</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal cho quản lý thuốc -->
+  <dialog id="drugDialog">
+    <button class="close" onclick="document.getElementById('drugDialog').close()">×</button>
+    <h2 id="drugModalTitle">Thêm Thuốc Mới</h2>
+    <form id="drugForm" onsubmit="event.preventDefault(); saveDrug();">
+      <div class="field">
+        <label>Tên thuốc *</label>
+        <input type="text" id="drugName" required>
+      </div>
+      <div class="field">
+        <label>Hoạt chất chính *</label>
+        <input type="text" id="drugIngredient" required>
+      </div>
+      <div class="field">
+        <label>Dạng bào chế *</label>
+        <input type="text" id="drugForm" placeholder="VD: Viên, Hỉ, Bột..." required>
+      </div>
+      <div class="field">
+        <label>Đường dùng *</label>
+        <select id="drugRoute" required>
+          <option value="">-- Chọn đường dùng --</option>
+          <option value="Uống">Uống</option>
+          <option value="Tiêm">Tiêm</option>
+          <option value="Bôi">Bôi ngoài</option>
+          <option value="Nhỏ">Nhỏ</option>
+          <option value="Hít">Hít</option>
+          <option value="Tức hậu môn">Tức hậu môn</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Hãng sản xuất</label>
+        <input type="text" id="drugManufacturer">
+      </div>
+      <div class="field">
+        <label>Ghi chú</label>
+        <textarea id="drugNotes" rows="3"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="document.getElementById('drugDialog').close()">Hủy</button>
+        <button type="submit">Lưu thuốc</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal cho quản lý bệnh nền -->
+  <dialog id="diseaseDialog">
+    <button class="close" onclick="document.getElementById('diseaseDialog').close()">×</button>
+    <h2 id="diseaseModalTitle">Thêm Bệnh Nền Mới</h2>
+    <form id="diseaseForm" onsubmit="event.preventDefault(); saveDisease();">
+      <div class="field">
+        <label>Tên bệnh *</label>
+        <input type="text" id="diseaseName" required>
+      </div>
+      <div class="field">
+        <label>Tên thông dụng</label>
+        <input type="text" id="diseaseCommonName" placeholder="VD: Cao huyết áp">
+      </div>
+      <div class="field">
+        <label>Mô tả bệnh</label>
+        <textarea id="diseaseDescription" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label>Ghi chú</label>
+        <textarea id="diseaseNotes" rows="3"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="document.getElementById('diseaseDialog').close()">Hủy</button>
+        <button type="submit">Lưu bệnh nền</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal cho quản lý dị ứng -->
+  <dialog id="allergyDialog">
+    <button class="close" onclick="document.getElementById('allergyDialog').close()">×</button>
+    <h2 id="allergyModalTitle">Thêm Dị Ứng Mới</h2>
+    <form id="allergyForm" onsubmit="event.preventDefault(); saveAllergy();">
+      <div class="field">
+        <label>Loại dị ứng *</label>
+        <input type="text" id="allergyName" required>
+      </div>
+      <div class="field">
+        <label>Triệu chứng</label>
+        <textarea id="allergySymptoms" rows="3" placeholder="Mô tả các triệu chứng dị ứng..."></textarea>
+      </div>
+      <div class="field">
+        <label>Mức độ nghiêm trọng</label>
+        <select id="allergySeverity">
+          <option value="Nhẹ">Nhẹ</option>
+          <option value="Vừa">Vừa</option>
+          <option value="Nặng">Nặng</option>
+          <option value="Nguy hiểm">Nguy hiểm</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="document.getElementById('allergyDialog').close()">Hủy</button>
+        <button type="submit">Lưu dị ứng</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal cho quản lý tương tác thuốc -->
+  <dialog id="interactionDialog">
+    <button class="close" onclick="document.getElementById('interactionDialog').close()">×</button>
+    <h2 id="interactionModalTitle">Thêm Tương Tác Thuốc</h2>
+    <form id="interactionForm" onsubmit="event.preventDefault(); saveInteraction();">
+      <div class="field">
+        <label>Hoạt chất thứ 1 *</label>
+        <select id="interactionIngredient1" required></select>
+      </div>
+      <div class="field">
+        <label>Hoạt chất thứ 2 *</label>
+        <select id="interactionIngredient2" required></select>
+      </div>
+      <div class="field">
+        <label>Mức độ tương tác *</label>
+        <select id="interactionSeverity" required>
+          <option value="Cao">Cao</option>
+          <option value="TrungBinh">Trung bình</option>
+          <option value="Thap">Thấp</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mô tả tương tác</label>
+        <textarea id="interactionDescription" rows="4" placeholder="Mô tả chi tiết cơ chế và hậu quả..."></textarea>
+      </div>
+      <div class="field">
+        <label>Khuyến nghị</label>
+        <textarea id="interactionRecommendation" rows="3"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="document.getElementById('interactionDialog').close()">Hủy</button>
+        <button type="submit">Lưu tương tác</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Bong bóng chat nổi -->
   <button id="chat-widget-button" onclick="toggleChat()" title="Trò chuyện với AI">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
